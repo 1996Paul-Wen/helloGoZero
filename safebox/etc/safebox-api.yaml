@@ -1,0 +1,10 @@
+Name: greet-api
+Host: 0.0.0.0
+Port: 8888
+
+Mysql:
+  DataSource: root:abcd@tcp(127.0.0.1:3306)/safebox?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai
+
+ESConfig:
+  Hosts:
+    - http://localhost:9200

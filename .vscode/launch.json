@@ -1,0 +1,15 @@
+
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch Package",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",        // 自动识别调试模式（推荐）
+      "program": "${workspaceFolder}/safebox",  // 指向package main 所在目录
+      "env": {},             // 可添加环境变量，如 {"GIN_MODE": "debug"}
+      "args": []             // 可传命令行参数，如 ["--port=8081"]
+    }
+  ]
+}
