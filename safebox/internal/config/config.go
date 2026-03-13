@@ -3,12 +3,14 @@
 
 package config
 
-import "github.com/zeromicro/go-zero/rest"
+import (
+	"github.com/zeromicro/go-zero/rest"
+)
 
 type Config struct {
-	rest.RestConf // 内嵌 go-zero 默认的 RESTful 服务配置
+	rest.RestConf // 内嵌 go-zero 默认的 RESTful 服务配置。内含有日志配置
 
-	// 自定义配置
+	// 以下为自定义配置
 	MySQL struct { // 数据库配置
 		DataSource string
 	}

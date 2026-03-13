@@ -1,6 +1,14 @@
 Name: greet-api
 Host: 0.0.0.0
 Port: 8888
+Log:
+  Mode: file           # 日志模式：console, file, volume
+  Path: logs           # 日志存放路径
+  Level: info          # 日志级别：info, error, severe
+  KeepDays: 7          # 日志保留天数
+  MaxBackups: 10       # 最大保留的旧日志文件数
+  MaxSize: 100         # 单个日志文件最大尺寸（MB）
+  Compress: true       # 是否压缩旧日志
 
 Mysql:
   DataSource: root:abcd@tcp(127.0.0.1:3306)/safebox?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai
@@ -12,3 +20,4 @@ ESConfig:
 Auth:
   AccessSecret: "my-secret-key"   # JWT 签名密钥
   AccessExpire: 300                # 过期时间（秒）
+
