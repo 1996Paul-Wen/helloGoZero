@@ -8,3 +8,7 @@ Mysql:
 ESConfig:
   Hosts:
     - http://localhost:9200
+
+Auth:
+  AccessSecret: "my-secret-key"   # JWT 签名密钥
+  AccessExpire: 300                # 过期时间（秒）

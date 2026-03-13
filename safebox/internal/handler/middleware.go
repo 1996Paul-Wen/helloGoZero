@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"net/http"
+	"strings"
 
+	"github.com/1996Paul-Wen/helloGoZero/safebox/internal/svc"
 	"github.com/1996Paul-Wen/helloGoZero/safebox/internal/util"
 	"github.com/google/uuid"
 	"github.com/zeromicro/go-zero/core/logx"
@@ -48,16 +50,41 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 }
 
 // 鉴权中间件
-// func AuthMiddleware(next http.HandlerFunc) http.HandlerFunc {
-// 	return func(w http.ResponseWriter, r *http.Request) {
-// 		token := r.Header.Get("Authorization")
-// 		if token != "valid-token" {
-// 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-// 			return
-// 		}
-// 		next(w, r)
-// 	}
-// }
+func BuildAuthMiddleware(serverCtx *svc.ServiceContext) func(http.HandlerFunc) http.HandlerFunc {
+	return func(next http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+
+			tokenString := r.Header.Get("Authorization") // 获取请求头中的Authorization字段
+			if tokenString == "" {
+				http.Error(w, "User not login", http.StatusUnauthorized)
+				return
+			}
+
+			// 标准格式: "Bearer <token>"
+			parts := strings.SplitN(tokenString, " ", 2)
+			if !(len(parts) == 2 && parts[0] == "Bearer") {
+				http.Error(w, "invalid authorization header format", http.StatusUnauthorized)
+				return
+			}
+
+			token := parts[1]
+			parsedToken, err := util.ParseToken(serverCtx.Config.Auth.AccessSecret, token) // 使用你的密钥解析token
+			if err != nil {
+				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				return
+			}
+
+			userId, err := util.GetUserID(parsedToken)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusUnauthorized)
+				return
+			}
+			ctx := context.WithValue(r.Context(), util.JWTKeyUserID, userId)
+			r = r.WithContext(ctx)
+			next(w, r)
+		}
+	}
+}
 
 // TraceMiddleware 生成或透传 Trace ID 并注入 context
 func TraceMiddleware(next http.HandlerFunc) http.HandlerFunc {

@@ -13,10 +13,16 @@ type Config struct {
 		DataSource string
 	}
 	ESConfig ESConfigModel
+	Auth     AuthModel
 }
 
 type ESConfigModel struct { // ES
 	Hosts []string // es 节点地址列表
 	// Username string // 可选，基本认证用户名
 	// Password string // 可选，基本认证密码
+}
+
+type AuthModel struct {
+	AccessSecret string
+	AccessExpire int64
 }

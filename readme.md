@@ -70,3 +70,12 @@ CREATE TABLE `managed_password` (
 goctl model mysql datasource -url="root:abcd@tcp(127.0.0.1:3306)/safebox" -table="user" -dir="./safebox/internal/model" -cache=false --style=goZero
 goctl model mysql datasource -url="root:abcd@tcp(127.0.0.1:3306)/safebox" -table="managed_password" -dir="./safebox/internal/model" -cache=false --style=goZero
 ```
+
+# curl
+```bash
+# login
+curl -POST http://localhost:8888/user/login -d '{"name": "abc", "password": "123"}' -H "Content-Type: application/json"
+
+# describe user
+curl -POST http://localhost:8888/user/describe -d '{}' -H "Content-Type: application/json" -H "Authorization:Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzMzODQ5MzQsImlhdCI6MTc3MzM4NDYzNCwidXNlcklkIjoxfQ.nf1cq5hQ7fHhO9hbHUCPBoarQFBYIPTN9isOGJ3IUrw"
+```
