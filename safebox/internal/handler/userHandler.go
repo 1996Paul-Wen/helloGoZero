@@ -9,6 +9,15 @@ import (
 	"github.com/zeromicro/go-zero/rest/httpx"
 )
 
+var userRouteGroup *RouteGroup
+
+func InitUserRouteGroup(svcCtx *svc.ServiceContext) {
+	userRouteGroup = NewRouteGroup("/user", svcCtx)
+
+	userRouteGroup.POST("/create", CreateUser(svcCtx))
+
+}
+
 func CreateUser(svcCtx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req types.CreateUserReq
