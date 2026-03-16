@@ -29,6 +29,7 @@ type (
 		FindOne(ctx context.Context, id uint64) (*ManagedPassword, error)
 		Update(ctx context.Context, data *ManagedPassword) error
 		Delete(ctx context.Context, id uint64) error
+		FindByCond(ctx context.Context, cond ListPWDCond) ([]*ManagedPassword, error)
 	}
 
 	defaultManagedPasswordModel struct {
@@ -46,6 +47,11 @@ type (
 		Updator     string    `db:"updator"`     // 更新人
 		CreateTime  time.Time `db:"create_time"` // 创建时间
 		UpdateTime  time.Time `db:"update_time"` // 更新时间
+	}
+
+	ListPWDCond struct {
+		IDs     []uint64
+		UserIDs []uint64
 	}
 )
 
@@ -86,6 +92,46 @@ func (m *defaultManagedPasswordModel) Update(ctx context.Context, data *ManagedP
 	query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, managedPasswordRowsWithPlaceHolder)
 	_, err := m.conn.ExecCtx(ctx, query, data.UserId, data.Description, data.Username, data.Password, data.Creator, data.Updator, data.Id)
 	return err
+}
+
+func (m *defaultManagedPasswordModel) FindByCond(ctx context.Context, cond ListPWDCond) ([]*ManagedPassword, error) {
+	query := fmt.Sprintf("select %s from %s", managedPasswordRows, m.table)
+
+	// 动态构建 WHERE 条件
+	whereClauses := []string{}
+	args := []any{}
+
+	// 处理 IDs 条件
+	if len(cond.IDs) > 0 {
+		placeholders := strings.Repeat("?,", len(cond.IDs))
+		placeholders = placeholders[:len(placeholders)-1]
+		whereClauses = append(whereClauses, fmt.Sprintf("`id` IN (%s)", placeholders))
+		for _, id := range cond.IDs {
+			args = append(args, id)
+		}
+	}
+
+	// 处理 UserIDs 条件
+	if len(cond.UserIDs) > 0 {
+		placeholders := strings.Repeat("?,", len(cond.UserIDs))
+		placeholders = placeholders[:len(placeholders)-1]
+		whereClauses = append(whereClauses, fmt.Sprintf("`user_id` IN (%s)", placeholders))
+		for _, userID := range cond.UserIDs {
+			args = append(args, userID)
+		}
+	}
+
+	// 拼接 WHERE 子句
+	if len(whereClauses) > 0 {
+		query += " WHERE " + strings.Join(whereClauses, " AND ")
+	}
+
+	var passwords []*ManagedPassword
+	err := m.conn.QueryRowsCtx(ctx, &passwords, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	return passwords, nil
 }
 
 func (m *defaultManagedPasswordModel) tableName() string {

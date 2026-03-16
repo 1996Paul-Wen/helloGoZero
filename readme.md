@@ -73,9 +73,38 @@ goctl model mysql datasource -url="root:abcd@tcp(127.0.0.1:3306)/safebox" -table
 
 # curl
 ```bash
+# create user
+curl -POST http://localhost:8888/user/create -d '{"name": "efg", "password": "456"}' -H "Content-Type: application/json"
+
 # login
 curl -POST http://localhost:8888/user/login -d '{"name": "abc", "password": "123"}' -H "Content-Type: application/json"
 
 # describe user
-curl -POST http://localhost:8888/user/describe -d '{}' -H "Content-Type: application/json" -H "Authorization:Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzMzODQ5MzQsImlhdCI6MTc3MzM4NDYzNCwidXNlcklkIjoxfQ.nf1cq5hQ7fHhO9hbHUCPBoarQFBYIPTN9isOGJ3IUrw"
+curl -POST http://localhost:8888/user/describe -d '{}' -H "Content-Type: application/json" -H "Authorization:Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzM2NDU2OTksImlhdCI6MTc3MzY0NTM5OSwidXNlcklkIjoxfQ.UALzZWS1_OBYlpyOnOoxJZICOM5bEqs8NaRWbaL65Yk"
+
+
+curl -POST http://localhost:8888/pwdManage/saveOne -d '{"description":"测试用中信银行非上海银行手机app","username":"testabc", "password": "testpwd"}' -H "Content-Type: application/json" -H "Authorization:Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzM2NDU2OTksImlhdCI6MTc3MzY0NTM5OSwidXNlcklkIjoxfQ.UALzZWS1_OBYlpyOnOoxJZICOM5bEqs8NaRWbaL65Yk"
+
+
+curl -POST http://localhost:8888/pwdManage/query -d '{"query":"中信 银行"}' -H "Content-Type: application/json" -H "Authorization:Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzM2NDY5NjQsImlhdCI6MTc3MzY0NjY2NCwidXNlcklkIjoxfQ.i7x8IZir5iKOfGXjxywX0GdaTM_2IQvihUtXlbLGSIA"
+
+resp:
+{
+    "Code": 0, 
+    "Msg": "", 
+    "Data": [
+        {
+            "Id": 1, 
+            "UserId": 1, 
+            "Description": "测试用中信银行非上海银行手机app", 
+            "Username": "testabc", 
+            "Password": "testpwd", 
+            "Creator": "abc", 
+            "Updator": "abc", 
+            "CreateTime": "2026-03-16T15:20:16+08:00", 
+            "UpdateTime": "2026-03-16T15:20:16+08:00"
+        }
+    ], 
+    "TraceID": "40a9c205-4e81-4b2e-81df-76d265f81f07"
+}
 ```

@@ -13,8 +13,10 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 
 	InitUserRouteGroup(serverCtx)
 	InitGreetRouteGroup(serverCtx)
+	InitPWDManageRouteGroup(serverCtx)
 	userRouteGroup.RegisterToServer(server)
 	greetRouteGroup.RegisterToServer(server)
+	pwdManageRouteGroup.RegisterToServer(server)
 
 	// 全局中间件
 	server.Use(TraceMiddleware)
