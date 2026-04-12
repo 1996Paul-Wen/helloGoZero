@@ -30,9 +30,7 @@ safebox应用启动命令：`go run ./safebox/safebox.go -f ./safebox/etc/safebo
 
 # 建表ddl
 ```sql
-CREATE DATABASE IF NOT EXISTS `safebox` 
-    -> CHARACTER SET utf8mb4 
-    -> COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE IF NOT EXISTS `safebox` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 use `safebox`;
 

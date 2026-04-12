@@ -11,11 +11,13 @@ Log:
   Compress: true       # 是否压缩旧日志
 
 Mysql:
-  DataSource: root:abcd@tcp(127.0.0.1:3306)/safebox?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai
+  # DataSource: root:abcd@tcp(localhost:3306)/safebox?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai
+  DataSource: root:abcd@tcp(host.docker.internal:3306)/safebox?charset=utf8mb4&parseTime=true&loc=Asia%2FShanghai
 
 ESConfig:
   Hosts:
-    - http://localhost:9200
+    # - http://localhost:9200
+    - http://host.docker.internal:9200
 
 Auth:
   AccessSecret: "my-secret-key"   # JWT 签名密钥
