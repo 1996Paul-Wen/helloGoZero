@@ -155,6 +155,19 @@ func (pml *PWDManageLogic) QueryByES(query string) ([]*model.ManagedPassword, er
 		return nil, errors.New("invalid user id")
 	}
 
+	if query == "" {
+		// 根据 ID 从 MySQL 查询完整记录
+		conn := infra.LoadSQLConn()
+		pwdManageModel := model.NewManagedPasswordModel(conn)
+
+		var passwords []*model.ManagedPassword
+		passwords, err := pwdManageModel.FindByCond(pml.ctx, model.ListPWDCond{
+			UserIDs: []uint64{userIdUint},
+		})
+
+		return passwords, err
+	}
+
 	// 创建 ES 客户端
 	esClient := infra.LoadESClient()
 
