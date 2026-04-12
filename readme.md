@@ -16,7 +16,7 @@ go mod tity
 go run ./greet/greet.go -f ./greet/etc/greet-api.yaml
 
 # test service 
-curl -i http://localhost:8888/from/you
+curl -i http://localhost:8888/greet/from/you
 ```
 
 基于该框架，搭建safebox
