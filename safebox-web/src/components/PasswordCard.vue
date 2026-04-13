@@ -1,10 +1,26 @@
 <template>
   <div class="card-hover bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
-    <!-- 卡片头部：描述 -->
-    <div class="mb-4">
-      <h3 class="font-semibold text-slate-800 text-base leading-snug line-clamp-2">
+    <!-- 卡片头部：描述 + 操作按钮 -->
+    <div class="flex items-start justify-between gap-2 mb-4">
+      <h3 class="font-semibold text-slate-800 text-base leading-snug line-clamp-2 flex-1 min-w-0">
         {{ props.item.Description }}
       </h3>
+      <div class="flex items-center gap-1 shrink-0">
+        <button
+          @click="openEditDialog"
+          class="p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-blue-50 transition-colors cursor-pointer"
+          title="修改"
+        >
+          <Pencil class="w-4 h-4" />
+        </button>
+        <button
+          @click="handleDelete"
+          class="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer"
+          title="删除"
+        >
+          <Trash2 class="w-4 h-4" />
+        </button>
+      </div>
     </div>
 
     <!-- 卡片主体信息 -->
@@ -78,14 +94,17 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { User, Key, Eye, EyeOff, Clock, ClipboardCopy } from 'lucide-vue-next'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { User, Key, Eye, EyeOff, Clock, ClipboardCopy, Pencil, Trash2 } from 'lucide-vue-next'
 import { decrypt } from '@/utils/crypto'
 import type { PasswordItem } from '@/types'
 import DecryptDialog from './DecryptDialog.vue'
 
 const props = defineProps<{ item: PasswordItem }>()
-const emit = defineEmits<{ (e: 'deleted', id: number): void }>()
+const emit = defineEmits<{
+  (e: 'deleted', id: number): void
+  (e: 'edit', item: PasswordItem): void
+}>()
 
 const showDecrypt = ref(false)
 const decryptedVisible = ref(false)
@@ -116,6 +135,26 @@ async function copyPassword(text: string) {
       document.execCommand('copy')
     }
     ElMessage.success('已复制到剪贴板')
+  }
+}
+
+function openEditDialog() {
+  emit('edit', props.item)
+}
+
+async function handleDelete() {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除「${props.item.Description}」吗？此操作不可恢复。`,
+      '删除确认',
+      { confirmButtonText: '删除', cancelButtonText: '取消', type: 'warning' }
+    )
+    const { deletePassword } = await import('@/api/pwdManage')
+    await deletePassword(props.item.Id)
+    ElMessage.success('删除成功')
+    emit('deleted', props.item.Id)
+  } catch {
+    // 用户取消
   }
 }
 

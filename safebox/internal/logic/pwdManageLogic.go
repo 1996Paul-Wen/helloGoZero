@@ -34,6 +34,7 @@ func NewPWDManageLogic(ctx context.Context, svcCtx *svc.ServiceContext) *PWDMana
 }
 
 type SavePWD struct {
+	ID          int64  `json:"id,optional"`
 	Description string `json:"description" validate:"required"`
 	Username    string `json:"username" validate:"required"`
 	Password    string `json:"password" validate:"required"`
@@ -239,4 +240,144 @@ func (pml *PWDManageLogic) QueryByES(query string) ([]*model.ManagedPassword, er
 	})
 
 	return passwords, err
+}
+
+func (pml *PWDManageLogic) DeleteOne(pwdID int64) (err error) {
+	userId := pml.ctx.Value(util.JWTKeyUserID)
+	userIdUint, ok := userId.(uint64)
+	if !ok {
+		return errors.New("invalid user id")
+	}
+	uint64PWDID := uint64(pwdID)
+
+	conn := infra.LoadSQLConn()
+	err = conn.Transact(func(session sqlx.Session) error {
+
+		pwdManageModel := model.NewManagedPasswordModel(sqlx.NewSqlConnFromSession(session))
+
+		pwdResp, err := pwdManageModel.FindByCond(pml.ctx, model.ListPWDCond{IDs: []uint64{uint64PWDID}, UserIDs: []uint64{userIdUint}})
+		if err != nil {
+			return err
+		}
+		if len(pwdResp) == 0 {
+			return model.ErrNotFound
+		}
+
+		// 1. 先从数据库删除
+		err = pwdManageModel.Delete(pml.ctx, uint64(pwdID))
+		if err != nil {
+			return err
+		}
+		// 2. 再从 ES 删除
+		esClient := infra.LoadESClient()
+		resp, err := esClient.Delete(
+			managedPWDESIndexName,
+			fmt.Sprintf("%d", pwdID),
+			esClient.Delete.WithContext(pml.ctx),
+		)
+
+		// 注意：即使 ES 中没有该文档，Delete 操作通常也不会报错（取决于版本和配置），
+		// 但最好检查响应状态
+		if err != nil {
+			logx.Errorf("ES delete request failed: %v", err)
+			return err
+		} else {
+			defer resp.Body.Close()
+			if resp.IsError() {
+				logx.Errorf("ES delete response error: %s", resp.String())
+			}
+		}
+		return nil
+	})
+
+	return err
+}
+
+func (pml *PWDManageLogic) UpdateOne(savePWD SavePWD) (int64, error) {
+	// validate savePWD
+	validate := validator.New()
+	err := validate.Struct(savePWD)
+	if err != nil {
+		// 处理验证错误
+		var errString strings.Builder
+		for _, err := range err.(validator.ValidationErrors) {
+			fmt.Fprintf(&errString, "字段 %s 不能为空\n", err.Field())
+		}
+		return -1, errors.New(errString.String())
+	}
+
+	userId := pml.ctx.Value(util.JWTKeyUserID)
+	userIdUint, ok := userId.(uint64)
+	if !ok {
+		return -1, errors.New("invalid user id")
+	}
+
+	conn := infra.LoadSQLConn()
+	pwdID := uint64(savePWD.ID)
+	// 启动事务 编程式事务
+	err = conn.Transact(func(session sqlx.Session) error {
+
+		// 在事务内使用 session 初始化模型，确保共用同一事务
+		userModel := model.NewUserModel(sqlx.NewSqlConnFromSession(session))
+		pwdManageModel := model.NewManagedPasswordModel(sqlx.NewSqlConnFromSession(session))
+
+		pwd, err := pwdManageModel.FindOne(pml.ctx, pwdID)
+		if err != nil {
+			return err
+		}
+		if pwd.UserId != userIdUint {
+			return errors.New("you are not allowed to update this password")
+		}
+
+		userDetail, err := userModel.FindOne(pml.ctx, userIdUint)
+		if err != nil {
+			return err
+		}
+
+		dataToUpdate := &model.ManagedPassword{
+			Id:          pwdID,
+			UserId:      userIdUint,
+			Description: savePWD.Description,
+			Username:    savePWD.Username,
+			Password:    savePWD.Password,
+			Updator:     userDetail.Username,
+		}
+
+		err = pwdManageModel.Update(pml.ctx, dataToUpdate)
+		if err != nil {
+			return err
+		}
+
+		// ---存入es---
+		esClient := infra.LoadESClient()
+		// 构造文档内容：description + username，方便模糊搜索
+		doc := map[string]interface{}{
+			"content": savePWD.Description + " " + savePWD.Username,
+		}
+		data, err := json.Marshal(doc)
+		if err != nil {
+			return err
+		}
+
+		// 索引文档，使用 MySQL 自增 ID 作为文档 ID. esClient.Index 本身就是 Upsert 行为
+		resp, err := esClient.Index(
+			managedPWDESIndexName, // 索引名称
+			bytes.NewReader(data),
+			esClient.Index.WithDocumentID(fmt.Sprintf("%d", pwdID)),
+			esClient.Index.WithContext(pml.ctx),
+			esClient.Index.WithRefresh("true"), // 立即刷新，方便后续查询
+		)
+		if err != nil {
+			return fmt.Errorf("ES 索引失败: %w", err)
+		}
+		defer resp.Body.Close()
+		if resp.IsError() {
+			return fmt.Errorf("ES 索引失败: %s", resp.String())
+		}
+
+		return nil
+	})
+
+	return savePWD.ID, err
+
 }

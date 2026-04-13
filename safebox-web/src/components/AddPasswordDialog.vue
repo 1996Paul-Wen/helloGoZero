@@ -65,14 +65,14 @@
         {{ submitting ? '保存中...' : '保 存' }}
       </button>
     </template>
-
-    <!-- 加密密钥二级弹窗 -->
-    <EncryptDialog
-      v-model:visible="showEncryptDialog"
-      :description="form.description"
-      @confirmed="handleEncrypted"
-    />
   </el-dialog>
+
+  <!-- 加密密钥二级弹窗（移到外层，避免被父弹窗遮挡） -->
+  <EncryptDialog
+    v-model:visible="showEncryptDialog"
+    :description="form.description"
+    @confirmed="handleEncrypted"
+  />
 </template>
 
 <script setup lang="ts">
@@ -111,8 +111,8 @@ const rules = {
 
 async function handleSubmit() {
   if (!formRef.value) return
-  await formRef.value.validate().catch(() => {})
-
+  const valid = await formRef.value.validate().catch(() => false)
+  if (!valid) return
   // 打开加密密钥弹窗
   showEncryptDialog.value = true
 }

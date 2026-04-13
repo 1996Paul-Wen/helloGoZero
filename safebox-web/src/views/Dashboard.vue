@@ -38,13 +38,23 @@
             @keyup.enter="handleSearch"
           />
         </div>
-        <button
-          @click="showAddDialog = true"
-          class="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-semibold shadow-lg shadow-blue-200 hover:shadow-xl hover:shadow-blue-300 hover:-translate-y-0.5 active:translate-y-0 transition-all whitespace-nowrap cursor-pointer"
-        >
-          <Plus class="w-5 h-5" />
-          新增密码
-        </button>
+        <div class="flex gap-3">
+          <button
+            @click="handleSearch"
+            :disabled="loading"
+            class="flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl border border-slate-200 bg-white text-slate-600 font-medium hover:bg-slate-50 hover:border-slate-300 transition-all whitespace-nowrap cursor-pointer disabled:opacity-50"
+          >
+            <List class="w-5 h-5" />
+            查询已存密码
+          </button>
+          <button
+            @click="showAddDialog = true"
+            class="flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-semibold shadow-lg shadow-blue-200 hover:shadow-xl hover:shadow-blue-300 hover:-translate-y-0.5 active:translate-y-0 transition-all whitespace-nowrap cursor-pointer"
+          >
+            <Plus class="w-5 h-5" />
+            新增密码
+          </button>
+        </div>
       </div>
 
       <!-- 加载中 -->
@@ -76,6 +86,7 @@
           :key="item.Id"
           :item="item"
           @deleted="handleDeleted"
+          @edit="openEditDialog"
         />
       </div>
     </main>
@@ -85,41 +96,59 @@
       v-model:visible="showAddDialog"
       @success="handleAdded"
     />
+
+    <!-- 修改密码弹窗 -->
+    <EditPasswordDialog
+      v-if="editItem"
+      v-model:visible="showEditDialog"
+      :item="editItem"
+      @success="handleEdited"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Plus, Lock } from 'lucide-vue-next'
+import { Search, Plus, Lock, List } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { queryPasswords } from '@/api/pwdManage'
 import type { PasswordItem } from '@/types'
 import PasswordCard from '@/components/PasswordCard.vue'
 import AddPasswordDialog from '@/components/AddPasswordDialog.vue'
+import EditPasswordDialog from '@/components/EditPasswordDialog.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
 
 const loading = ref(false)
 const showAddDialog = ref(false)
+const showEditDialog = ref(false)
+const editItem = ref<PasswordItem | null>(null)
 const searchQuery = ref('')
 const passwords = ref<PasswordItem[]>([])
 
 onMounted(async () => {
   if (!authStore.isLoggedIn) return
-  await authStore.fetchUserInfo()
+  await Promise.all([authStore.fetchUserInfo(), handleLoadAll()])
 })
 
 async function handleSearch() {
-  if (!searchQuery.value.trim()) {
-    passwords.value = []
-    return
-  }
   loading.value = true
   try {
-    const res = await queryPasswords(searchQuery.value.trim())
+    const res = await queryPasswords(searchQuery.value)
+    passwords.value = res.Data || []
+  } finally {
+    loading.value = false
+  }
+}
+
+async function handleLoadAll() {
+  searchQuery.value = ''
+  loading.value = true
+  try {
+    const res = await queryPasswords('')
     passwords.value = res.Data || []
   } finally {
     loading.value = false
@@ -128,11 +157,22 @@ async function handleSearch() {
 
 function handleAdded() {
   searchQuery.value = ''
-  handleSearch()
+  handleLoadAll()
 }
 
 function handleDeleted(id: number) {
-  passwords.value = passwords.value.filter((p) => p.Id !== id)
+  handleLoadAll()
+}
+
+function openEditDialog(item: PasswordItem) {
+  editItem.value = item
+  nextTick(() => {
+    showEditDialog.value = true
+  })
+}
+
+function handleEdited() {
+  handleLoadAll()
 }
 
 async function handleLogout() {

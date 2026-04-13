@@ -162,6 +162,32 @@ resp:
 ```
 
 ```bash
+# 修改已保存的用户名/密码
+curl -POST http://localhost:8888/pwdManage/updateOne -d '{"id":1, "description":"测试用中信银行非上海银行手机app", "username":"testabc", "password": "testpwd"}' -H "Content-Type: application/json" -H "Content-Type: application/json" -H "Authorization:Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzU5OTAyMDIsImlhdCI6MTc3NTk4OTkwMiwidXNlcklkIjoxfQ.H91Tp6_cI4WnSvWIbMYnnGPHCBYWHSaN_EIzmnSeXOE"
+
+resp:
+{
+    "Code": 0,
+    "Msg": "",
+    "Data": 1,
+    "TraceID": "5be786dd-1a77-4fc5-8d31-44cf5e0e2a9b"
+}
+```
+
+```bash
+# 删除一条用户名和密码
+curl -POST http://localhost:8888/pwdManage/deleteOne -d '{"id":1}' -H "Content-Type: application/json" -H "Content-Type: application/json" -H "Authorization:Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NzU5OTAyMDIsImlhdCI6MTc3NTk4OTkwMiwidXNlcklkIjoxfQ.H91Tp6_cI4WnSvWIbMYnnGPHCBYWHSaN_EIzmnSeXOE"
+
+resp:
+{
+    "Code": 0,
+    "Msg": "",
+    "Data": null,
+    "TraceID": "5be786dd-1a77-4fc5-8d31-44cf5e0e2a9b"
+}
+```
+
+```bash
 # 登陆态过期查询
 
 ```bash

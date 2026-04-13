@@ -48,6 +48,14 @@ export interface SavePwdReq {
   password: string
 }
 
+/** 更新密码请求 */
+export interface UpdatePwdReq {
+  id: number
+  description: string
+  username: string
+  password: string
+}
+
 /** 查询密码请求 */
 export interface QueryPwdReq {
   query: string
