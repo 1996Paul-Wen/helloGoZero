@@ -5,10 +5,21 @@ const KEY_SIZE = 256 / 32 // 256 bits = 8 words (32-bit each)
 const SALT = 'SafeBox2024SaltKey'
 
 /**
- * 从用户输入的字符串派生 AES-256 密钥
+ * 计算描述+用户名的 SHA256 哈希，取后 4 位字符
  */
-function deriveKey(passphrase: string): CryptoJS.lib.WordArray {
-  return CryptoJS.PBKDF2(passphrase, SALT, {
+function hashSuffix(description: string, username: string): string {
+  const combined = description + username
+  const hash = CryptoJS.SHA256(combined)
+  return hash.toString(CryptoJS.enc.Hex).slice(-4)
+}
+
+/**
+ * 从用户输入的字符串派生 AES-256 密钥
+ * 派生规则：用户密钥 + hash(描述+用户名)后4位，再 PBKDF2
+ */
+function deriveKey(passphrase: string, description: string, username: string): CryptoJS.lib.WordArray {
+  const finalKey = passphrase + hashSuffix(description, username)
+  return CryptoJS.PBKDF2(finalKey, SALT, {
     keySize: KEY_SIZE,
     iterations: PBKDF2_ITERATIONS,
   })
@@ -18,10 +29,17 @@ function deriveKey(passphrase: string): CryptoJS.lib.WordArray {
  * 使用 AES-256-CBC 加密明文密码
  * @param plainText 明文密码
  * @param passphrase 用户输入的加密密钥字符串
+ * @param description 密码记录描述（参与密钥派生）
+ * @param username 密码记录用户名（参与密钥派生）
  * @returns Base64 编码的密文（IV + ciphertext）
  */
-export function encrypt(plainText: string, passphrase: string): string {
-  const key = deriveKey(passphrase)
+export function encrypt(
+  plainText: string,
+  passphrase: string,
+  description: string,
+  username: string,
+): string {
+  const key = deriveKey(passphrase, description, username)
   const iv = CryptoJS.lib.WordArray.random(128 / 8) // 16 bytes random IV
 
   const encrypted = CryptoJS.AES.encrypt(plainText, key, {
@@ -39,11 +57,18 @@ export function encrypt(plainText: string, passphrase: string): string {
  * 使用 AES-256-CBC 解密密文
  * @param cipherText Base64 编码的密文（IV + ciphertext）
  * @param passphrase 用户输入的解密密钥字符串
- * @returns 解密后的明文密码，失败返回空字符串
+ * @param description 密码记录描述（参与密钥派生）
+ * @param username 密码记录用户名（参与密钥派生）
+ * @returns 解密后的明文密码
  */
-export function decrypt(cipherText: string, passphrase: string): string {
+export function decrypt(
+  cipherText: string,
+  passphrase: string,
+  description: string,
+  username: string,
+): string {
   try {
-    const key = deriveKey(passphrase)
+    const key = deriveKey(passphrase, description, username)
     const combined = CryptoJS.enc.Base64.parse(cipherText)
 
     // 提取 IV（前16字节）和密文

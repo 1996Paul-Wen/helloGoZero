@@ -125,7 +125,7 @@ function handleEncrypted(encryptionKey: string) {
 async function doSaveWithEncryption(keyStr: string) {
   submitting.value = true
   try {
-    const encryptedPassword = encrypt(form.password, keyStr)
+    const encryptedPassword = encrypt(form.password, keyStr, form.description, form.username)
     await savePassword({
       description: form.description,
       username: form.username,

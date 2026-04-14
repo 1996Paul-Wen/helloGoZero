@@ -114,7 +114,7 @@ const pwdInputRef = ref<HTMLInputElement>()
 
 function handleDecrypted(decryptionKey: string) {
   try {
-    const plainText = decrypt(props.item.Password, decryptionKey)
+    const plainText = decrypt(props.item.Password, decryptionKey, props.item.Description, props.item.Username)
     decryptedPwd.value = plainText
     decryptedVisible.value = true
     showDecrypt.value = false

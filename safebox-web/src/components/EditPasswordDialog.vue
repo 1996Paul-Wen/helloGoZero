@@ -160,7 +160,7 @@ watch(
 
 function handleDecrypted(decryptionKey: string) {
   try {
-    decryptedPwd.value = decrypt(props.item.Password, decryptionKey)
+    decryptedPwd.value = decrypt(props.item.Password, decryptionKey, props.item.Description, props.item.Username)
     form.password = decryptedPwd.value
     changePwdMode.value = true
     showDecrypt.value = false
@@ -186,7 +186,7 @@ async function doSaveWithEncryption(keyStr: string) {
     // 如果修改了密码，重新加密；否则保持原密文
     const { updatePassword } = await import('@/api/pwdManage')
     const passwordToSave = changePwdMode.value && form.password
-      ? encrypt(form.password, keyStr)
+      ? encrypt(form.password, keyStr, form.description, form.username)
       : props.item.Password
     await updatePassword({
       id: props.item.Id,
