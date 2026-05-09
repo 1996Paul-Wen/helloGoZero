@@ -1,3 +1,4 @@
+# 项目启动说明
 项目启动需要依赖4个镜像
 - safebox前端镜像（`./safebox-web/docker_build.sh`可构建）
 - safebox后端镜像 (`./docker_build.sh`可构建)
@@ -101,13 +102,15 @@ curl -X GET "http://localhost:9200"
 # 运行后端容器
 docker run -d \
   -p 8888:8888 \
+  --add-host host.docker.internal:host-gateway \
   -v /local/path/to/safebox-api.yaml:/root/etc/safebox-api.yaml \
   --name safebox \
-  safebox-service
+  safebox-service:latest
 
 # 运行前端容器
 docker run -d \
   -p 80:80 \
+  --add-host host.docker.internal:host-gateway \
   -v /Users/sauyinman/workspace/git_repo/helloGoZero/safebox-web/nginx.conf:/etc/nginx/conf.d/default.conf:ro \
   safebox-web:latest
 ```

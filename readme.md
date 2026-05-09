@@ -215,3 +215,149 @@ Unauthorized
  ~ % 
 
 ```
+
+
+# 从固定密钥衍生随机密钥，防止数据库爆破
+safebox前端对用户输入的待保存的密码，使用AES对称加密后，将得到的密文密码交给后端入库
+
+为了防止数据库爆破，用户保存的每个密码需要使用不同的AES密钥
+
+但用户不可能每次使用不同的AES密钥去加密密码，否则用户又将需要记忆大量的AES密钥，从而陷入用一个密码加密另一个密码的困境
+
+safebox的解决方案是，
+- **一个用户只需要使用一个AES密钥，由safebox通过计算来衍生出不同的、最终的AES密钥**
+- **密文密码将插入固定长度的随机前缀，使得相同明文每次加密结果不同，防止模式分析**
+
+
+## AES 静态密钥 → 动态密钥的渲染机制
+
+核心在 `safebox-web/src/utils/crypto.ts`，整个流程如下：
+
+### 整体架构
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                     用户输入（"静态"）                         │
+│  passphrase: "我的加密密码123"   ← 用户每次手动输入的主密钥     │
+│                                                              │
+│                        ↓ 派生算法                            │
+│                                                              │
+│              deriveKey() 函数                                │
+│    ┌─────────────────────────────────────┐                  │
+│    │ passphrase + hashSuffix(desc+user)  │                  │
+│    │         ↓                           │                  │
+│    │ PBKDF2(10000次迭代, 固定Salt)       │                  │
+│    │         ↓                           │                  │
+│    │ 输出：256-bit AES 密钥（动态）       │                  │
+│    └─────────────────────────────────────┘                  │
+│                        ↓                                    │
+│              AES-256-CBC 加密/解密                          │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### 核心代码逐层解析
+
+**第一步：生成每条记录唯一的 hash 后缀**
+
+```10:14:safebox-web/src/utils/crypto.ts
+function hashSuffix(description: string, username: string): string {
+  const combined = description + username          // "Gmail账号"+"zhangsan"
+  const hash = CryptoJS.SHA256(combined)            // SHA-256 哈希
+  return hash.toString(CryptoJS.enc.Hex).slice(-4)  // 取最后 4 个 hex 字符，如 "a3f2"
+}
+```
+
+> 这一步让 **不同密码记录产生不同的后缀**，保证每条记录的实际加密密钥不同。
+
+**第二步：PBKDF2 密钥派生（静态 → 动态）**
+
+```20:26:safebox-web/src/utils/crypto.ts
+function deriveKey(passphrase: string, description: string, username: string): CryptoJS.lib.WordArray {
+  const finalKey = passphrase + hashSuffix(description, username)
+  // 例: "我的密码123" + "a3f2" = "我的密码123a3f2"
+  
+  return CryptoJS.PBKDF2(finalKey, SALT, {        // ← 核心！PBKDF2 拉伸
+    keySize: KEY_SIZE,      // 256 bits (32 bytes) = AES-256
+    iterations: 10000,      // 10000 次哈希迭代，增加暴力破解成本
+  })
+}
+```
+
+> `SALT = 'SafeBox2024SaltKey'` 是硬编码的固定盐值。
+
+**第三步：AES-256-CBC 加密**
+
+```36:54:safebox-web/src/utils/crypto.ts
+export function encrypt(plainText, passphrase, description, username): string {
+  const key = deriveKey(passphrase, description, username)  // 动态密钥
+  const iv = CryptoJS.lib.WordArray.random(128 / 8)          // 随机 IV (16字节)
+  
+  const encrypted = CryptoJS.AES.encrypt(plainText, key, {
+    iv: iv,
+    mode: CryptoJS.mode.CBC,
+    padding: CryptoJS.pad.Pkcs7,
+  })
+  
+  // IV + 密文 拼在一起 Base64 编码输出
+  const combined = iv.concat(encrypted.ciphertext)
+  return combined.toString(CryptoJS.enc.Base64)
+}
+```
+
+### 具体示例
+
+假设用户保存一条 **Gmail 账号密码**：
+
+| 参数 | 值 |
+|------|-----|
+| 描述 | `Gmail账号` |
+| 用户名 | `zhangsan@gmail.com` |
+| 明文密码 | `MyGmailPass2024!` |
+| 用户输入的加密密钥 | `mypass123` |
+
+**派生过程**：
+
+```
+1. hashSuffix("Gmail账号", "zhangsan@gmail.com")
+   → SHA256("Gmail账号zhangsan@gmail.com") 的最后4位 → 例如 "7d3e"
+
+2. finalKey = "mypass123" + "7d3e" = "mypass1237d3e"
+
+3. PBKDF2("mypass1237d3e", "SafeBox2024SaltKey", 10000次)
+   → 32字节的 AES-256 动态密钥
+
+4. 用该动态密钥 + 随机IV 做 AES-256-CBC 加密
+   → 输出 Base64 密文存入数据库
+```
+
+如果保存另一条 **GitHub 账号**（用同一个主密钥）：
+
+```
+1. hashSuffix("GitHub账号", "zhangsan") 
+   → SHA256 不同 → 后缀不同，例如 "a1b2"
+
+2. finalKey = "mypass123" + "a1b2" = "mypass123a1b2"
+
+3. PBKDF2 输出的密钥完全不同！
+
+→ 同一个主密码 "mypass123"，两条记录的实际 AES 密钥不同 ✓
+```
+
+---
+
+## 设计总结
+
+| 层级 | 内容 | 是否存储 |
+|------|------|---------|
+| **静态密钥** | 用户每次手动输入的 `passphrase`（如 "mypass123"） | ❌ 不存储 |
+| **固定盐值** | `SafeBox2024SaltKey`（硬编码在前端代码中） | ✅ 在前端源码中 |
+| **记录指纹** | `hashSuffix(description+username)` 后 4 位 | ❌ 不存储，可复算 |
+| **动态密钥** | PBKDF2 派生出的 256-bit AES 密钥 | ❌ 不存储，用完即弃 |
+| **随机 IV** | 每次加密生成的 16 字节随机向量 | ✅ 存在密文头部 |
+| **最终密文** | `Base64(IV + ciphertext)` | ✅ 存入 MySQL |
+
+**关键设计思想**：
+1. **一主密钥 + 多条记录 = 多个不同的 AES 密钥** — 即使一条被破解，其他条目不受影响
+2. **PBKDF2 10000 次迭代** — 抵御暴力破解/彩虹表攻击
+3. **随机 IV** — 相同明文每次加密结果不同，防止模式分析
+4. **服务端永远不接触明文和密钥** — 纯前端加密，后端只存密文
