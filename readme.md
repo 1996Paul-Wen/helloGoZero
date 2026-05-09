@@ -1,4 +1,4 @@
-# safebox基于go-zero初始化
+# safebox后端基于go-zero初始化
 本项目基于go-zero框架初始化：
 ```bash
 # install goctl
@@ -40,8 +40,8 @@ CREATE TABLE `user` (
     `hash_password` VARCHAR(255) NOT NULL COMMENT 'bcrypt哈希后的密码', 
     `creator`     VARCHAR(50) NOT NULL COMMENT '创建人',
     `updator`     VARCHAR(50) NOT NULL COMMENT '更新人',
-    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `create_time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uniq_username` (`username`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
@@ -55,8 +55,8 @@ CREATE TABLE `managed_password` (
     `password` VARCHAR(255) NOT NULL COMMENT '密码（对称加密后的值）', 
     `creator`     VARCHAR(50) NOT NULL COMMENT '创建人',
     `updator`     VARCHAR(50) NOT NULL COMMENT '更新人',
-    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `create_time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `update_time` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     PRIMARY KEY (`id`),
     INDEX `user_id_idx` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='被管理的用户密码表';

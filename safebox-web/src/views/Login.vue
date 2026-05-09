@@ -14,36 +14,45 @@
 
       <!-- 登录表单 -->
       <el-form :model="form" :rules="rules" ref="formRef" @submit.prevent="handleLogin">
-        <el-form-item prop="name">
-          <label class="block text-sm font-medium text-slate-700 mb-1.5">用户名</label>
-          <input
-            v-model="form.name"
-            type="text"
-            placeholder="请输入用户名"
-            class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white/60 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-sm"
-            autocomplete="username"
-          />
+        <el-form-item prop="name" class="!mb-5">
+          <div class="flex items-center gap-3">
+            <label class="text-sm font-medium text-slate-700 w-14 text-right shrink-0">用户名</label>
+            <div class="relative flex-1">
+              <input
+                v-model="form.name"
+                type="text"
+                placeholder="请输入用户名"
+                class="w-full px-4 pr-11 py-2.5 rounded-xl border border-slate-200 bg-white/60 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-sm box-border"
+                autocomplete="username"
+              />
+              <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none select-none">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
+              </span>
+            </div>
+          </div>
         </el-form-item>
 
-        <el-form-item prop="password">
-          <label class="block text-sm font-medium text-slate-700 mb-1.5">密码</label>
-          <div class="relative">
-            <input
-              v-model="form.password"
-              :type="showPwd ? 'text' : 'password'"
-              placeholder="请输入密码"
-              class="w-full px-4 py-2.5 pr-11 rounded-xl border border-slate-200 bg-white/60 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-sm"
-              autocomplete="current-password"
-              @keyup.enter="handleLogin"
-            />
-            <button
-              type="button"
-              @click="showPwd = !showPwd"
-              class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-            >
-              <Eye v-if="!showPwd" class="w-5 h-5" />
-              <EyeOff v-else class="w-5 h-5" />
-            </button>
+        <el-form-item prop="password" class="!mb-5">
+          <div class="flex items-center gap-3">
+            <label class="text-sm font-medium text-slate-700 w-14 text-right shrink-0">密码</label>
+            <div class="relative flex-1">
+              <input
+                v-model="form.password"
+                :type="showPwd ? 'text' : 'password'"
+                placeholder="请输入密码"
+                class="w-full px-4 pr-11 py-2.5 rounded-xl border border-slate-200 bg-white/60 focus:bg-white focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-sm box-border"
+                autocomplete="current-password"
+                @keyup.enter="handleLogin"
+              />
+              <button
+                type="button"
+                @click="showPwd = !showPwd"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              >
+                <Eye v-if="!showPwd" class="w-5 h-5" />
+                <EyeOff v-else class="w-5 h-5" />
+              </button>
+            </div>
           </div>
         </el-form-item>
 

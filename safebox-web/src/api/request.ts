@@ -27,7 +27,7 @@ request.interceptors.response.use(
       ElMessage.error(data.Msg)
       return Promise.reject(new Error(data.Msg))
     }
-    return data
+    return data as any
   },
   (error) => {
     if (error.response?.status === 401) {
