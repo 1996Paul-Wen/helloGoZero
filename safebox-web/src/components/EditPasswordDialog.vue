@@ -107,7 +107,7 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue'
+import { reactive, ref, watch, computed } from 'vue'
 import { Eye, EyeOff, ShieldAlert, Edit } from 'lucide-vue-next'
 import { ElMessage } from 'element-plus'
 import { decrypt, encrypt } from '@/utils/crypto'
@@ -131,6 +131,7 @@ const showDecrypt = ref(false)
 const showEncryptDialog = ref(false)
 const changePwdMode = ref(false)
 const decryptedPwd = ref('')
+const decryptingForReEncrypt = ref(false) // 是否在为"仅修改描述/用户名"而解密
 
 const form = reactive({
   description: '',
@@ -143,6 +144,15 @@ const rules = {
   username: [{ required: true, message: '请输入用户名或账号', trigger: 'blur' }],
 }
 
+// 记录原始值，判断 description/username 是否变更
+const originalDesc = ref('')
+const originalUser = ref('')
+
+// description 或 username 是否有变更（不含 password 变更）
+const descOrUserChanged = computed(
+  () => form.description !== originalDesc.value || form.username !== originalUser.value
+)
+
 // 每次打开弹窗，用 item 填充表单
 watch(
   () => props.visible,
@@ -154,6 +164,10 @@ watch(
       changePwdMode.value = false
       decryptedPwd.value = ''
       showPwd.value = false
+      decryptingForReEncrypt.value = false
+      // 保存原始值用于比较
+      originalDesc.value = props.item.Description
+      originalUser.value = props.item.Username
     }
   }
 )
@@ -164,6 +178,7 @@ function handleDecrypted(decryptionKey: string) {
     form.password = decryptedPwd.value
     changePwdMode.value = true
     showDecrypt.value = false
+    decryptingForReEncrypt.value = false
   } catch (error: any) {
     ElMessage.error(error.message || '解密失败')
   }
@@ -173,21 +188,68 @@ async function handleSubmit() {
   if (!formRef.value) return
   const valid = await formRef.value.validate().catch(() => false)
   if (!valid) return
-  showEncryptDialog.value = true
+
+  // 场景一：什么都没变（包括 password 未改动），直接用原密文保存
+  if (!changePwdMode.value && !descOrUserChanged.value) {
+    await doSaveDirect()
+    return
+  }
+
+  // 场景二：改了密码（有明文），直接走加密流程
+  if (changePwdMode.value && form.password) {
+    showEncryptDialog.value = true
+    return
+  }
+
+  // 场景三：只改了 description/username，密码未变
+  // 需要：旧 key 解密 → 新 key 重新加密
+  if (descOrUserChanged.value && !changePwdMode.value) {
+    decryptingForReEncrypt.value = true
+    showDecrypt.value = true
+    return
+  }
 }
+
+// 解密完成后（场景三：仅修改描述/用户名）
+// handleDecrypted 中 decryptingForReEncrypt 为 true 时，复用解密结果走加密流程
+watch(decryptedPwd, (val) => {
+  if (decryptingForReEncrypt.value && val) {
+    decryptingForReEncrypt.value = false
+    // decryptedPwd 已有明文（用旧 key 解的），form.password 也在
+    // 直接打开加密弹窗，用新 key 重新加密
+    showEncryptDialog.value = true
+  }
+})
 
 function handleEncrypted(encryptionKey: string) {
   doSaveWithEncryption(encryptionKey)
 }
 
+async function doSaveDirect() {
+  submitting.value = true
+  try {
+    const { updatePassword } = await import('@/api/pwdManage')
+    await updatePassword({
+      id: props.item.Id,
+      description: form.description,
+      username: form.username,
+      password: props.item.Password,
+    })
+    ElMessage.success('已更新')
+    emit('update:visible', false)
+    emit('success')
+  } catch (error: any) {
+    ElMessage.error(error.message || '保存失败')
+  } finally {
+    submitting.value = false
+  }
+}
+
 async function doSaveWithEncryption(keyStr: string) {
   submitting.value = true
   try {
-    // 如果修改了密码，重新加密；否则保持原密文
     const { updatePassword } = await import('@/api/pwdManage')
-    const passwordToSave = changePwdMode.value && form.password
-      ? encrypt(form.password, keyStr, form.description, form.username)
-      : props.item.Password
+    const passwordToSave = encrypt(form.password, keyStr, form.description, form.username)
     await updatePassword({
       id: props.item.Id,
       description: form.description,
