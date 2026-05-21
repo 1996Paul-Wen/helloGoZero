@@ -13,7 +13,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 echo "使用 $SCRIPT_DIR 路径作为 Docker 构建上下文"
 
 docker build \
-  # --platform linux/amd64 \
+  --platform linux/amd64 \
   -t ${IMAGE_NAME}:${IMAGE_TAG} \
   --build-arg VITE_API_BASE_URL=/api \
   "$SCRIPT_DIR"
